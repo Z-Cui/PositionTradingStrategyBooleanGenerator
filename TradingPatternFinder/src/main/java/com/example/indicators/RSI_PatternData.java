@@ -2,6 +2,7 @@ package com.example.indicators;
 
 import java.time.LocalDateTime;
 
+// RSI: a momentum oscillator to measure the speed of price movement
 public class RSI_PatternData {
 	
 	private LocalDateTime datetime;

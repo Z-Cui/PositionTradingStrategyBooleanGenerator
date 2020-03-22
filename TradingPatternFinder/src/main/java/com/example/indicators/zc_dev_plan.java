@@ -20,5 +20,8 @@ public class zc_dev_plan {
 	/* Dones:
 	 * Mar 19
 	 * RSI Relative Strength Index
+	 * 
+	 * Mar 22
+	 * Stochastic
 	 */
 }
