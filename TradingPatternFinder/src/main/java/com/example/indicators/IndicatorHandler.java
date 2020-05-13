@@ -10,9 +10,76 @@ import org.patriques.output.technicalindicators.data.STOCHDataSlow;
 
 public class IndicatorHandler {
 	
-	// Function: RSI_IndicatorHander(RSI response_RSI)
-	// Input:    TechnicalIndicatorResponse response_RSI
-	// Output:   
+	public List<EMA200_EMA50_PatternData> EMA200EMA50_IndicatorHandler(EMA response_EMA200, EMA response_EMA50, int size_result) {
+		List<EMA200_EMA50_PatternData> result = new ArrayList<EMA200_EMA50_PatternData>();
+		List<IndicatorData> ema200 = response_EMA200.getData();
+		List<IndicatorData> ema50 = response_EMA50.getData();
+		
+		// copy EMA data to result list
+		for (int i = 0; i < size_result+1; i++) {
+			IndicatorData e200 = ema200.get(i);
+			IndicatorData e50 = ema50.get(i);
+			EMA200_EMA50_PatternData tmp = new EMA200_EMA50_PatternData(e200.getDateTime(), e200.getData(), e50.getData());
+			result.add(tmp);
+		}
+		// analyze EMA
+		for (int i = 0; i < size_result; i++) {
+			EMA200_EMA50_PatternData j0 = result.get(i);
+			EMA200_EMA50_PatternData j1 = result.get(i+1);
+			
+			// ema200_up
+			if ( j0.getEma200() > j1.getEma200() ) j0.setEma200_up(true);
+			// ema200_down
+			if ( j0.getEma200() < j1.getEma200() ) j0.setEma200_down(true);
+			// ema50_up
+			if ( j0.getEma50() > j1.getEma50() ) j0.setEma50_up(true);
+			// ema50_down
+			if ( j0.getEma50() < j1.getEma50() ) j0.setEma50_down(true);
+			
+		}
+		return result;
+	}
+	
+	public List<STOCHRSI_PatternData> STOCHRSI_IndicatorHandler(STOCHRSI responseStochRSI, int size_result) {
+		List<STOCHRSI_PatternData> result = new ArrayList<STOCHRSI_PatternData>();
+		List<STOCHDataFast> stochRSI = responseStochRSI.getData();
+		
+		// copy STOCHRSI data to result list
+		for (int i = 0; i < size_result+1; i++) {
+			STOCHDataFast t = stochRSI.get(i);
+			STOCHRSI_PatternData tmp = new STOCHRSI_PatternData(t.getDateTime(), t.getFastK(), t.getFastD());
+			result.add(tmp);
+		}
+		
+		// analyze StochRSI
+		for (int i = 0; i < size_result; i++) {
+			STOCHRSI_PatternData j0 = result.get(i);
+			STOCHRSI_PatternData j1 = result.get(i+1);
+			
+			// if K increases more than 1% than previous day
+			if ( j0.getValueK() > j1.getValueK() + 1.0 ) j0.setK_up(true);
+			
+			// if K decreases more than 1% than previous day
+			if ( j0.getValueK() + 1.0 < j1.getValueK() ) j0.setK_down(true);
+			
+			// if K crosses D
+			if ( j0.getValueK() > j0.getValueD() && j1.getValueK() < j1.getValueD() ) j0.setK_cross_d(true);
+			if ( j0.getValueK() < j0.getValueD() && j1.getValueK() > j1.getValueD() ) j0.setK_cross_d(true);
+			
+			// K oversold < 30%
+			if ( j0.getValueK() < 30 ) j0.setK_oversold(true);
+			
+			// K overbought > 70%
+			if ( j0.getValueK() > 70 ) j0.setK_overbought(true);
+			
+		}
+		
+		// only return [size_result] days' STOCHRSI analysis
+		result =  result.stream().limit(size_result).collect(Collectors.toList());
+		return result;
+	}
+	
+	
 	public List<RSI_PatternData> RSI_IndicatorHander(RSI responseShort, RSI responseLong, int size_result) { 
 		
 		List<IndicatorData> rsiShort = responseShort.getData();
