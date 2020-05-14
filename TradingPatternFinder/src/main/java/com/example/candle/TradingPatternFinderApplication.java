@@ -63,7 +63,9 @@ public class TradingPatternFinderApplication {
 	    
 	    try {
 	    	// Stock Code: Microsoft MSFT
-	    	String stockCode = "MSFT";
+	    	//String stockCode = "MSFT";
+	    	//String stockCode = "TLSA";
+	    	String stockCode = "AAPL";
 	    	
 	    	// Analyse recent 30 days
 	    	int size_result = 30;
@@ -120,7 +122,7 @@ public class TradingPatternFinderApplication {
 	            for (int i = 0; i < size_result; i++) {
 	            	STOCHRSI_PatternData j0_stochrsi = StochRsiResult.get(i);
 	            	EMA200_EMA50_PatternData j0_ema = EMA200EMA50Result.get(i);
-	            	writer.writeNext(ArrayUtils.addAll(j0_stochrsi.toArray(), j0_ema.toArray()));
+	            	writer.writeNext(ArrayUtils.addAll(j0_ema.toArray(), j0_stochrsi.toArray()));
 	            }
 	            // closing writer connection 
 	            writer.close(); 
