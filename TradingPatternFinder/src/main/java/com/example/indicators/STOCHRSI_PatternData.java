@@ -24,6 +24,20 @@ public class STOCHRSI_PatternData {
 		this.k_oversold = false;
 		this.k_overbought = false;
 	}
+	
+	public String[] toArray() {
+		String[] result = new String[8];
+		result[0] = this.datetime.toString();
+		result[1] = String.valueOf(this.valueK);
+		result[2] = String.valueOf(this.valueD);
+		result[3] = String.valueOf(this.k_up);
+		result[4] = String.valueOf(this.k_down);
+		result[5] = String.valueOf(this.k_overbought);
+		result[6] = String.valueOf(this.k_oversold);
+		result[7] = String.valueOf(this.k_cross_d);
+		return result;
+	}
+	
 	public LocalDateTime getDatetime() {
 		return datetime;
 	}

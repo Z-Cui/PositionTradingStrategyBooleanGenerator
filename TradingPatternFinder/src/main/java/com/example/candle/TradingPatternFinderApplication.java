@@ -3,10 +3,12 @@ package com.example.candle;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.patriques.AlphaVantageConnector;
 import org.patriques.TimeSeries;
 import org.patriques.input.timeseries.*;
@@ -35,6 +37,15 @@ import org.patriques.output.technicalindicators.*;
 import org.patriques.output.technicalindicators.data.IndicatorData;
 
 import com.example.indicators.*;
+import java.lang.Object.*;
+import com.opencsv.CSVWriter;
+
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
 @SpringBootApplication
 public class TradingPatternFinderApplication {
@@ -44,23 +55,30 @@ public class TradingPatternFinderApplication {
 	    String apiKey = "L2XQBCB0BV31ZGF1";
 	    int timeout = 3000;
 	    AlphaVantageConnector apiConnector = new AlphaVantageConnector(apiKey, timeout);
-	    TimeSeries stockTimeSeries = new TimeSeries(apiConnector);
 	    
+	    // api for time series
+	    TimeSeries stockTimeSeries = new TimeSeries(apiConnector);
 	    // api for technical indicators
 	    TechnicalIndicators technicalIndicators = new TechnicalIndicators(apiConnector);
 	    
 	    try {
+	    	// Stock Code: Microsoft MSFT
+	    	String stockCode = "MSFT";
+	    	
+	    	// Analyse recent 30 days
+	    	int size_result = 30;
+	    	
+	    	// priceData consists of 100 days daily close, open, high, low prices
+	    	Daily response = stockTimeSeries.daily(stockCode, OutputSize.COMPACT);
+	    	List<StockData> priceData = response.getStockData();
+	    	// for (int i = 0; i < 5; i++) System.out.println(priceData.get(i).getClose());
 	    	
 	    	// Interface to technical indicators
 	    	IndicatorHandler indicatorHandler = new IndicatorHandler();
 	    	
-	    	// Stock Code: Microsoft MSFT
-	    	String stockCode = "MSFT";
-	    	
 	    	// ---------------------------------------------------------------------------------------
 	    	// StochRSI Query: 14-days close-price StochRSI, K=21, D=21
-	    	STOCHRSI response_StochRSI = technicalIndicators.stochrsi(
-	    			stockCode,
+	    	STOCHRSI response_StochRSI = technicalIndicators.stochrsi(stockCode,
 	    			org.patriques.input.technicalindicators.Interval.DAILY,
 	    			org.patriques.input.technicalindicators.TimePeriod.of(14),
 	    			org.patriques.input.technicalindicators.SeriesType.CLOSE,
@@ -68,36 +86,76 @@ public class TradingPatternFinderApplication {
 	    			org.patriques.input.technicalindicators.FastDPeriod.of(21),
 	    			org.patriques.input.technicalindicators.FastDMaType.SMA);
 	    	
-	    	// Analyse recent 30 days
-	    	int size_result = 30;
-	    	
 	    	List<STOCHRSI_PatternData> StochRsiResult = indicatorHandler.STOCHRSI_IndicatorHandler(response_StochRSI, size_result);
-	    	
-	    	// Visualize result : 5 days StochRSI
-	    	for (int i = 0; i < 5; i++) {
-	    		STOCHRSI_PatternData j0 = StochRsiResult.get(i);
-	    		System.out.println(j0.getDatetime() + " K:" + j0.getValueK() + " D:" + j0.getValueD());
-	    		System.out.println("K_up:" + j0.isK_up() + " | K_down:" + j0.isK_down() + 
-	    				" | KcrossD:" + j0.isK_cross_d() + " | K_oversold:" + j0.isK_oversold() +
-	    				" | K_overbought:" + j0.isK_overbought());
-	    	}
 	    	
 	    	// ---------------------------------------------------------------------------------------
 	    	// EMA50 and EMA200
-	    	EMA response_EMA50 = technicalIndicators.ema(
-	    			stockCode, 
+	    	EMA response_EMA50 = technicalIndicators.ema(stockCode, 
 	    			org.patriques.input.technicalindicators.Interval.DAILY,
 	    			org.patriques.input.technicalindicators.TimePeriod.of(50),
 	    			org.patriques.input.technicalindicators.SeriesType.CLOSE);
-	    	
-	    	EMA response_EMA200 = technicalIndicators.ema(
-	    			stockCode, 
+	    	EMA response_EMA200 = technicalIndicators.ema(stockCode, 
 	    			org.patriques.input.technicalindicators.Interval.DAILY,
 	    			org.patriques.input.technicalindicators.TimePeriod.of(200),
 	    			org.patriques.input.technicalindicators.SeriesType.CLOSE);
 	    	
-	    	List<EMA200_EMA50_PatternData> EMA200EMA50Result = indicatorHandler.EMA200EMA50_IndicatorHandler(response_EMA200, response_EMA50, size_result);
+	    	List<EMA200_EMA50_PatternData> EMA200EMA50Result = indicatorHandler
+	    			.EMA200EMA50_IndicatorHandler(response_EMA200, response_EMA50, size_result, priceData);
 	    	
+	    	// wrote to csv file for prolog strategy testing
+	    	String filename_csv = "./positionTradingStrategyBooleanTable_" + stockCode + ".csv";
+	    	try {
+	            // create CSVWriter object filewriter object as parameter
+	    		FileWriter outputfile = new FileWriter(filename_csv); 
+	            CSVWriter writer = new CSVWriter(outputfile, ',', 
+	            		CSVWriter.NO_QUOTE_CHARACTER,
+	            		CSVWriter.DEFAULT_ESCAPE_CHARACTER,
+	            		CSVWriter.DEFAULT_LINE_END); 
+	            
+	            // adding header to csv 
+	            String[] header = { "datetime", "ema200", "ema50", "ema200_up", "ema200_down", "ema50_up", "ema50_down",
+	            		"golden_cross", "death_cross", "close_price_cross_above_ema50", "close_price_cross_below_ema200",
+	            		"datetime2", "k", "d", "k_up", "k_down", "k_overbought", "k_oversold",  "k_cross_d"}; 
+	            writer.writeNext(header); 
+	            for (int i = 0; i < size_result; i++) {
+	            	STOCHRSI_PatternData j0_stochrsi = StochRsiResult.get(i);
+	            	EMA200_EMA50_PatternData j0_ema = EMA200EMA50Result.get(i);
+	            	writer.writeNext(ArrayUtils.addAll(j0_stochrsi.toArray(), j0_ema.toArray()));
+	            }
+	            // closing writer connection 
+	            writer.close(); 
+	        } 
+	        catch (IOException e) { 
+	            e.printStackTrace(); 
+	        } 
+	    	
+	    	// Visualize result : 5 days StochRSI and 5 days EMA200_EMA50
+	    	System.out.println("---------------------------------------------------------------------------");
+	    	for (int i = 0; i < 5; i++) {
+	    		
+	    		STOCHRSI_PatternData j0_stochrsi = StochRsiResult.get(i);
+	    		System.out.println(j0_stochrsi.getDatetime() + " StochRSI K:" + j0_stochrsi.getValueK() + " D:" + j0_stochrsi.getValueD());
+	    		System.out.println("K_up:" + j0_stochrsi.isK_up() + " | K_down:" + j0_stochrsi.isK_down() + 
+	    				" | KcrossD:" + j0_stochrsi.isK_cross_d() + " | K_oversold:" + j0_stochrsi.isK_oversold() +
+	    				" | K_overbought:" + j0_stochrsi.isK_overbought());
+	    		
+	    		EMA200_EMA50_PatternData j0_ema = EMA200EMA50Result.get(i);
+	    		System.out.println(j0_ema.getDatetime() + " EMA200:" + j0_ema.getEma200() + " EMA50:" + j0_ema.getEma50());
+	    		System.out.println("EMA200_up:" + j0_ema.isEma200_up() + " | EMA200_down:" + j0_ema.isEma200_down() +
+	    				" | EMA50_up:" + j0_ema.isEma50_up() + " | EMA50_down:" + j0_ema.isEma50_down());
+	    		System.out.println("GoldenCross:" + j0_ema.isEma200_ema50_goldencross() +
+	    				" | DeathCross:" + j0_ema.isEma200_ema50_deathcross() +
+	    				" | ClosePriceCrossAboveEMA50:" + j0_ema.isClose_price_break_above_ema50() +
+	    				" | ClosePriceCrossBelowEMA200:" + j0_ema.isClose_price_break_below_ema200());
+	    		
+	    		System.out.println("-----");
+	    		System.out.println(Arrays.toString(j0_stochrsi.toArray()));
+	    		System.out.println(Arrays.toString(j0_ema.toArray()));
+	    		System.out.println("---------------------------------------------------------------------------");
+	    		
+	    	}
+	    	
+	    	//private static final String CSV_SEPARATOR = ",";
 	    	
 	    	
 	    	
@@ -109,11 +167,9 @@ public class TradingPatternFinderApplication {
 	    			OutputSize.COMPACT);
 	    	Daily response = stockTimeSeries.daily("MSFT", OutputSize.COMPACT);
 	    	Map<String, String> metaData = response.getMetaData();
-	    	//System.out.println("Information: " + metaData.get("1. Information"));
+	    	System.out.println("Information: " + metaData.get("1. Information"));
 	    	System.out.println("Stock: " + metaData.get("2. Symbol"));
-	    	*/
 	    	
-	    	/*
 	    	List<StockData> stockData = response.getStockData();
 	    	stockData.forEach(stock -> {
 	    		Candlestick test = new  Candlestick( stock.getOpen(), stock.getHigh(), stock.getLow(), stock.getClose(), stock.getDateTime(),
@@ -149,10 +205,7 @@ public class TradingPatternFinderApplication {
 	    			}
 	    		System.out.println(patterns.size());
 	    		});
-	    	
 	    	*/
-	    	
-	    	
 	    	
 	    	/*
 	    	// ---------------------------------------------------------------------------------------
@@ -206,7 +259,6 @@ public class TradingPatternFinderApplication {
 	    		System.out.println(j0.isOverbought()+"        "+j0.isOversold()+"       "+j0.isFastKDownCrossfastD()+"                 "
 	    				+j0.isSlowKDownCrossSlowD()+"                 "+j0.isFastKUpCrossfastD()+"               "+j0.isSlowKUpCrossslowD());
 	    	}
-	    	
 	    	
 	    	// ---------------------------------------------------------------------------------------
 	    	// Williams Query

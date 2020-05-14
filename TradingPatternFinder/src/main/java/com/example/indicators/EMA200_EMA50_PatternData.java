@@ -36,6 +36,24 @@ public class EMA200_EMA50_PatternData {
 		this.close_price_break_above_ema50 = false;
 		this.close_price_break_below_ema200 = false;
 	}
+	
+	public String[] toArray() {
+		String[] result = new String[11];
+		result[0] = this.datetime.toString();
+		result[1] = String.valueOf(this.ema200);
+		result[2] = String.valueOf(this.ema50);
+		result[3] = String.valueOf(this.ema200_up);
+		result[4] = String.valueOf(this.ema200_down);
+		result[5] = String.valueOf(this.ema50_up);
+		result[6] = String.valueOf(this.ema50_down);
+		result[7] = String.valueOf(this.ema200_ema50_goldencross);
+		result[8] = String.valueOf(this.ema200_ema50_deathcross);
+		result[9] = String.valueOf(this.close_price_break_above_ema50);
+		result[10] = String.valueOf(this.close_price_break_below_ema200);
+		return result;
+	}
+	
+	
 	public LocalDateTime getDatetime() {
 		return datetime;
 	}

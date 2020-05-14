@@ -7,10 +7,13 @@ import org.patriques.output.technicalindicators.*;
 import org.patriques.output.technicalindicators.data.IndicatorData;
 import org.patriques.output.technicalindicators.data.STOCHDataFast;
 import org.patriques.output.technicalindicators.data.STOCHDataSlow;
+import org.patriques.output.timeseries.data.StockData;
 
 public class IndicatorHandler {
 	
-	public List<EMA200_EMA50_PatternData> EMA200EMA50_IndicatorHandler(EMA response_EMA200, EMA response_EMA50, int size_result) {
+	public List<EMA200_EMA50_PatternData> EMA200EMA50_IndicatorHandler(
+			EMA response_EMA200, EMA response_EMA50, int size_result, List<StockData> priceData) {
+		
 		List<EMA200_EMA50_PatternData> result = new ArrayList<EMA200_EMA50_PatternData>();
 		List<IndicatorData> ema200 = response_EMA200.getData();
 		List<IndicatorData> ema50 = response_EMA50.getData();
@@ -22,6 +25,7 @@ public class IndicatorHandler {
 			EMA200_EMA50_PatternData tmp = new EMA200_EMA50_PatternData(e200.getDateTime(), e200.getData(), e50.getData());
 			result.add(tmp);
 		}
+		
 		// analyze EMA
 		for (int i = 0; i < size_result; i++) {
 			EMA200_EMA50_PatternData j0 = result.get(i);
@@ -35,8 +39,21 @@ public class IndicatorHandler {
 			if ( j0.getEma50() > j1.getEma50() ) j0.setEma50_up(true);
 			// ema50_down
 			if ( j0.getEma50() < j1.getEma50() ) j0.setEma50_down(true);
+			// ema200 ema50 golden cross
+			if ( j0.getEma50() > j0.getEma200() && j1.getEma50() < j1.getEma200() ) j0.setEma200_ema50_goldencross(true);
+			// ema200 ema50 death cross
+			if ( j0.getEma50() < j0.getEma200() && j1.getEma50() > j1.getEma200() ) j0.setEma200_ema50_deathcross(true);
+			
+			// close price breaks above ema50
+			if ( j0.getEma50() < priceData.get(i).getClose() && j1.getEma50() > priceData.get(i+1).getClose() )
+				j0.setClose_price_break_above_ema50(true);
+			// close price breaks below ema200
+			if ( j0.getEma200() > priceData.get(i).getClose() && j1.getEma200() < priceData.get(i+1).getClose() )
+				j0.setClose_price_break_below_ema200(true);
 			
 		}
+		// only return [size_result] days' EMA200_EMA50 analysis
+		result =  result.stream().limit(size_result).collect(Collectors.toList());
 		return result;
 	}
 	
